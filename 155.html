@@ -1,0 +1,38 @@
+<!DOCTYPE html><html lang="fi"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Salattu sivu</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#eef2f7;color:#1f2530;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.box{background:#fff;border-radius:16px;box-shadow:0 8px 30px rgba(20,30,50,.12);padding:40px;max-width:440px;width:90%;text-align:center}
+.icon{font-size:44px;margin-bottom:12px}.t{font-size:20px;font-weight:600;margin-bottom:10px}.s{color:#6b7585;font-size:14px}
+.spin{display:inline-block;width:20px;height:20px;border:3px solid #d7deea;border-top-color:#2563eb;border-radius:50%;animation:s .6s linear infinite;margin-top:14px}@keyframes s{to{transform:rotate(360deg)}}
+.field{margin-top:16px}input{width:100%;padding:13px 16px;border:2px solid #d7deea;background:#f8fafc;border-radius:12px;font-size:16px;outline:none}input:focus{border-color:#2563eb}
+.go{margin-top:10px;width:100%;padding:13px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer}
+.s code{background:#eef1f5;border:1px solid #dde3ec;border-radius:4px;padding:0 5px;font-size:12px;font-family:ui-monospace,Menlo,monospace}
+.badge{margin-top:18px;padding-top:13px;border-top:1px solid #eef1f5;font-size:11.5px;color:#8b94a3;letter-spacing:.2px}</style>
+</head><body>
+<div class="box" id="boxAuto"><div class="icon">🔐</div><div class="t">Sisältö on salattu — puretaan…</div>
+<div class="s">Tämän sivun sisältö on tallennettu palvelimelle vain salattuna. Selaimesi purkaa sen nyt linkin avaimella.</div>
+<div class="spin"></div><div class="badge">AES-256-GCM &middot; PBKDF2 600 000</div></div>
+<div class="box" id="boxAsk" style="display:none"><div class="icon">🔒</div><div class="t">Sisältö on salattu</div>
+<div class="s"><b>Et näe mitään ilman avainta.</b> Tälle sivulle on tallennettu vain salattua dataa — ei otsikkoa, ei tekstiä, ei kuvia.
+Sisältö aukeaa automaattisesti täydellä jakolinkillä, jossa avain on osoitteen <code>#</code>-osassa. Jos sait avaimen erikseen, liitä se alle.</div>
+<form id="f"><div class="field"><input id="pw" placeholder="Liitä avain tähän" autocomplete="off"></div><button class="go" type="submit">Pura ja avaa</button></form>
+<div class="badge">AES-256-GCM &middot; PBKDF2 600 000 kierrosta &middot; avain ei kulje palvelimelle</div></div>
+
+<script>
+var S='owNSVKpniCfE0+oKB6wGFQ==',V='v53Jonu+ZdiIx5HV',E='1hNIosshS5+ZfDmeQIoWaXuhpoJgNB/zg/2m8GryctYPNFNFQysNfGuiTHpDfR0Q/0nMo7h/uKy5ZotD5LHplWcEsg0MSVm1tkOa8EXaJSmCbL/DPuVuft/LlzXzLB3BMiEWOH6i093xxOw7LDdZfBTgxhonSU3fZcmmmrmBmqY6Sh1Fum/aMlkWbvZk5LY5x3owNojoX5woOk86qJu5YdwG1zUTp8w+Ylv0YWTNVLlioM7f7dXQy8q3s/zE+wIP6rPUMXozQjW2Wb8Oy9TFTAr7rC/oZuHon2eq';
+/* ÄLÄ nimeä tätä "mypa":ksi — funktiomäärittely ylikirjoittaisi beaconin
+   window.mypa-olion, jolloin eventit katoaisivat ja salattu sisältö
+   alustaisi beaconin uudelleen (tuplapageview). */
+function mypaSend(ev){try{if(window.mypa&&window.mypa.send)window.mypa.send(ev)}catch(e){}}
+function b(s){for(var a=atob(s),r=new Uint8Array(a.length),i=0;i<a.length;i++)r[i]=a.charCodeAt(i);return r}
+function dec(pwd){var t=new TextEncoder();return crypto.subtle.importKey("raw",t.encode(pwd),"PBKDF2",false,["deriveKey"]).then(function(km){return crypto.subtle.deriveKey({name:"PBKDF2",salt:b(S),iterations:600000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"])}).then(function(k){return crypto.subtle.decrypt({name:"AES-GCM",iv:b(V)},k,b(E))}).then(function(buf){return new TextDecoder().decode(buf)})}
+function anchorFromHash(){var h=(location.hash||"").replace(/^#/,"");try{var u=new URLSearchParams(h);return u.get("s")||""}catch(e){return""}}
+function render(html){var a=anchorFromHash();if(a&&/^[A-Za-z][\w-]*$/.test(a)){html+="<script>window.addEventListener(\"load\",function(){var el=document.getElementById(\""+a+"\");if(el)el.scrollIntoView();});<\/script>"}document.open();document.write(html);document.close()}
+function showAsk(){document.getElementById("boxAuto").style.display="none";document.getElementById("boxAsk").style.display="block";var p=document.getElementById("pw");if(p)p.focus()}
+function ask(){mypaSend("report_locked");showAsk()}
+function open_(html){mypaSend("report_open");render(html)}
+function keyFromHash(){var h=(location.hash||"").replace(/^#/,"");if(!h)return"";try{var u=new URLSearchParams(h);if(u.get("k"))return u.get("k")}catch(e){}return decodeURIComponent(h)}
+var key=keyFromHash();
+if(key){dec(key).then(open_).catch(function(){mypaSend("report_key_fail");showAsk()})}else{ask()}
+document.addEventListener("DOMContentLoaded",function(){var f=document.getElementById("f");if(!f)return;f.onsubmit=function(e){e.preventDefault();dec(document.getElementById("pw").value).then(open_).catch(function(){mypaSend("report_key_fail");alert("Väärä avain.")})}})
+</script></body></html>
